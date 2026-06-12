@@ -9,8 +9,8 @@ st.title("🚐 VW T4 Kleinanzeigen – Filter & Suche")
 # --- Daten laden ---
 @st.cache_data
 def load_data():
-    df = pd.read_csv("/home/scardia/Projekte/Transporter/output_final.csv")
-
+    df = pd.read_csv("output_final.csv")
+    
     # Numerische Felder sicherstellen
     df["preis_num"] = pd.to_numeric(df["preis_num"], errors="coerce")
     df["km_num"] = pd.to_numeric(df["km_num"], errors="coerce")
