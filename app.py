@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import ast
 from datetime import datetime
 
 st.set_page_config(page_title="VW T4 Anzeigen", layout="wide")
@@ -11,12 +10,10 @@ st.title("🚐 VW T4 Kleinanzeigen – Filter & Suche")
 def load_data():
     df = pd.read_csv("output_final.csv")
     
-    # Numerische Felder sicherstellen
     df["preis_num"] = pd.to_numeric(df["preis_num"], errors="coerce")
     df["km_num"] = pd.to_numeric(df["km_num"], errors="coerce")
     df["jahr"] = pd.to_numeric(df["jahr"], errors="coerce")
 
-    # HU-Datum parsen (z.B. "November 2026" → datetime)
     def parse_hu(val):
         try:
             return pd.to_datetime(val, format="%B %Y", locale="de_DE")
@@ -28,6 +25,7 @@ def load_data():
 
     df["hu_datum"] = df["HU bis"].apply(parse_hu)
     df["hu_monat_num"] = df["hu_datum"].apply(lambda x: x.strftime("%Y-%m") if pd.notna(x) else "unbekannt")
+    df["ps_num"] = df["Leistung"].str.replace(" PS", "", regex=False).apply(pd.to_numeric, errors="coerce")
 
     return df
 
@@ -36,70 +34,55 @@ df = load_data()
 # --- Sidebar Filter ---
 st.sidebar.header("🔍 Filter")
 
-# Preis
 preis_min, preis_max = int(df["preis_num"].min()), int(df["preis_num"].max())
 preis_range = st.sidebar.slider("Preis (€)", preis_min, preis_max, (preis_min, preis_max), step=50)
 
-# Kilometerstand
 km_min, km_max = int(df["km_num"].min()), int(df["km_num"].max())
 km_range = st.sidebar.slider("Kilometerstand", km_min, km_max, (km_min, km_max), step=5000)
 
-# Baujahr
 jahr_min, jahr_max = int(df["jahr"].min()), int(df["jahr"].max())
 jahr_range = st.sidebar.slider("Baujahr", jahr_min, jahr_max, (jahr_min, jahr_max), step=1)
 
-# HU bis
+ps_min, ps_max = int(df["ps_num"].min()), int(df["ps_num"].max())
+ps_range = st.sidebar.slider("Leistung (PS)", ps_min, ps_max, (ps_min, ps_max), step=1)
+
 hu_optionen = sorted([x for x in df["hu_monat_num"].unique() if x != "unbekannt"])
-hu_optionen_all = ["alle"] + hu_optionen + ["unbekannt"]
 hu_filter = st.sidebar.selectbox("HU bis (frühestens)", ["alle"] + hu_optionen)
 
-# Rost
 rost_filter = st.sidebar.selectbox("Rost", ["alle", "kein Rost", "Rost vorhanden"])
 
-# Camper
 camper_filter = st.sidebar.selectbox("Camper-Ausbau", ["alle", "Ja", "Nein"])
 
-# Fahrzeugzustand
 zustand_optionen = ["alle"] + sorted(df["Fahrzeugzustand"].dropna().unique().tolist())
 zustand_filter = st.sidebar.selectbox("Fahrzeugzustand", zustand_optionen)
 
-# Kraftstoff
 kraftstoff_optionen = ["alle"] + sorted(df["Kraftstoffart"].dropna().unique().tolist())
 kraftstoff_filter = st.sidebar.selectbox("Kraftstoffart", kraftstoff_optionen)
 
-# Getriebe
 getriebe_optionen = ["alle"] + sorted(df["Getriebe"].dropna().unique().tolist())
 getriebe_filter = st.sidebar.selectbox("Getriebe", getriebe_optionen)
 
-# Leistung
-ps_min, ps_max = int(df["Leistung"].str.replace(" PS","").dropna().astype(float).min()), \
-                  int(df["Leistung"].str.replace(" PS","").dropna().astype(float).max())
-ps_range = st.sidebar.slider("Leistung (PS)", ps_min, ps_max, (ps_min, ps_max), step=1)
+fahrbereit_filter = st.sidebar.selectbox("Fahrbereit", ["alle", "ja", "nein", "eingeschränkt", "unbekannt"])
 
-# Außenfarbe
+reparaturstau_filter = st.sidebar.selectbox("Reparaturstau", ["alle", "ja", "nein", "unbekannt"])
+
+umbauten_filter = st.sidebar.selectbox("Umbauten", ["alle", "ja", "nein", "unbekannt"])
+
 farbe_optionen = ["alle"] + sorted(df["Außenfarbe"].dropna().unique().tolist())
 farbe_filter = st.sidebar.selectbox("Außenfarbe", farbe_optionen)
 
-# Standort / PLZ
 ort_suche = st.sidebar.text_input("Standort enthält (PLZ oder Ort)")
-
-# Freitext-Suche
 freitext = st.sidebar.text_input("Freitext-Suche (Titel / Beschreibung)")
+schaeden_suche = st.sidebar.text_input("Schäden enthält")
+ausstattung_suche = st.sidebar.text_input("Ausstattung enthält")
+positive_suche = st.sidebar.text_input("Positive Signale enthält")
+negative_suche = st.sidebar.text_input("Negative Signale enthält")
 
-# Sortierung
 st.sidebar.header("↕️ Sortierung")
 sort_col = st.sidebar.selectbox("Sortieren nach", ["preis_num", "km_num", "jahr", "hu_datum"])
 sort_asc = st.sidebar.radio("Reihenfolge", ["Aufsteigend", "Absteigend"]) == "Aufsteigend"
 
 # --- Filterlogik ---
-def ps_to_num(val):
-    try:
-        return float(str(val).replace(" PS", ""))
-    except:
-        return None
-
-df["ps_num"] = df["Leistung"].apply(ps_to_num)
-
 mask = (
     df["preis_num"].between(*preis_range) &
     df["km_num"].between(*km_range) &
@@ -129,6 +112,15 @@ if kraftstoff_filter != "alle":
 if getriebe_filter != "alle":
     mask &= df["Getriebe"] == getriebe_filter
 
+if fahrbereit_filter != "alle":
+    mask &= df["fahrbereit_clean"] == fahrbereit_filter
+
+if reparaturstau_filter != "alle":
+    mask &= df["reparaturstau"] == reparaturstau_filter
+
+if umbauten_filter != "alle":
+    mask &= df["umbauten"] == umbauten_filter
+
 if farbe_filter != "alle":
     mask &= df["Außenfarbe"] == farbe_filter
 
@@ -141,9 +133,21 @@ if freitext:
         df["beschreibung"].str.contains(freitext, case=False, na=False)
     )
 
+if schaeden_suche:
+    mask &= df["schadenshinweise"].str.contains(schaeden_suche, case=False, na=False)
+
+if ausstattung_suche:
+    mask &= df["ausstattung_extra"].str.contains(ausstattung_suche, case=False, na=False)
+
+if positive_suche:
+    mask &= df["positive_signale"].str.contains(positive_suche, case=False, na=False)
+
+if negative_suche:
+    mask &= df["negative_signale"].str.contains(negative_suche, case=False, na=False)
+
 filtered = df[mask].sort_values(sort_col, ascending=sort_asc)
 
-# --- Anzeige ---
+# --- Metriken ---
 st.markdown(f"**{len(filtered)} Anzeigen gefunden**")
 
 st.subheader("📊 Statistiken (gefilterte Anzeigen)")
@@ -164,13 +168,14 @@ with m3:
 
 st.divider()
 
+# --- Ansicht ---
 ansicht = st.radio("Ansicht", ["Tabelle", "Karten"], horizontal=True)
 
-# Spalten für Tabelle
 tabellen_spalten = [
     "titel", "preis_num", "km_num", "jahr", "Leistung",
     "Kraftstoffart", "Getriebe", "Fahrzeugzustand", "Außenfarbe",
-    "HU bis", "Ort", "hat_rost", "is_camper", "url"
+    "HU bis", "Ort", "hat_rost", "is_camper", "fahrbereit_clean",
+    "reparaturstau", "umbauten", "url"
 ]
 
 if ansicht == "Tabelle":
@@ -178,7 +183,8 @@ if ansicht == "Tabelle":
     anzeige_df.columns = [
         "Titel", "Preis (€)", "KM", "Baujahr", "PS",
         "Kraftstoff", "Getriebe", "Zustand", "Farbe",
-        "HU bis", "Ort", "Rost", "Camper", "Link"
+        "HU bis", "Ort", "Rost", "Camper", "Fahrbereit",
+        "Reparaturstau", "Umbauten", "Link"
     ]
     st.dataframe(
         anzeige_df,
@@ -191,7 +197,7 @@ if ansicht == "Tabelle":
         hide_index=True
     )
 
-else:  # Karten
+else:
     cols_per_row = 2
     rows = [filtered.iloc[i:i+cols_per_row] for i in range(0, len(filtered), cols_per_row)]
 
@@ -205,6 +211,7 @@ else:  # Karten
                     st.markdown(f"⚙️ {r['Kraftstoffart']} | {r['Getriebe']} | {r['Leistung']}")
                     st.markdown(f"🎨 {r['Außenfarbe']} | 🔧 {r['Fahrzeugzustand']}")
                     st.markdown(f"📍 {r['Ort']} &nbsp;|&nbsp; 🔩 HU: {r['HU bis']}")
+                    st.markdown(f"🚗 Fahrbereit: {r['fahrbereit_clean']} &nbsp;|&nbsp; 🔧 Reparaturstau: {r['reparaturstau']} &nbsp;|&nbsp; 🛠️ Umbauten: {r['umbauten']}")
 
                     badges = []
                     if r["hat_rost"]: badges.append("🟠 Rost")
