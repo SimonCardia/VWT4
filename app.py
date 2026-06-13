@@ -21,7 +21,8 @@ km_range = st.sidebar.slider("Kilometerstand", km_min, km_max, (km_min, km_max),
 jahr_min, jahr_max = int(df["jahr"].min()), int(df["jahr"].max())
 jahr_range = st.sidebar.slider("Baujahr", jahr_min, jahr_max, (jahr_min, jahr_max), step=1)
 
-ps_min, ps_max = int(df["ps_num"].min()), int(df["ps_num"].max())
+ps_min = int(df["ps_num"].min(skipna=True))
+ps_max = int(df["ps_num"].max(skipna=True))
 ps_range = st.sidebar.slider("Leistung (PS)", ps_min, ps_max, (ps_min, ps_max), step=1)
 
 hu_optionen = sorted([x for x in df["hu_monat_num"].unique() if x != "unbekannt"])
@@ -69,7 +70,7 @@ mask = (
     df["preis_num"].between(*preis_range) &
     df["km_num"].between(*km_range) &
     df["jahr"].between(*jahr_range) &
-    df["ps_num"].between(*ps_range)
+    (df["ps_num"].between(*ps_range) | df["ps_num"].isna())
 )
 
 if hu_filter != "alle":
