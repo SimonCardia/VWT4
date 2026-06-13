@@ -45,6 +45,12 @@ getriebe_filter = st.sidebar.selectbox("Getriebe", getriebe_optionen)
 farbe_optionen = ["alle"] + sorted(df["Außenfarbe"].dropna().unique().tolist())
 farbe_filter = st.sidebar.selectbox("Außenfarbe", farbe_optionen)
 
+modell_optionen = ["alle"] + sorted(df["modell_clean"].dropna().unique().tolist())
+modell_filter = st.sidebar.selectbox("Modell", modell_optionen)
+
+fahrzeugart_optionen = ["alle"] + sorted(df["fahrzeugart"].dropna().unique().tolist())
+fahrzeugart_filter = st.sidebar.selectbox("Fahrzeugart", fahrzeugart_optionen)
+
 st.sidebar.subheader("🔧 Ausstattung")
 hat_ahk = st.sidebar.checkbox("Anhängerkupplung (AHK)")
 hat_camper = st.sidebar.checkbox("Camper-Ausbau")
@@ -99,6 +105,12 @@ if getriebe_filter != "alle":
 
 if farbe_filter != "alle":
     mask &= df["Außenfarbe"] == farbe_filter
+
+if modell_filter != "alle":
+    mask &= df["modell_clean"] == modell_filter
+
+if fahrzeugart_filter != "alle":
+    mask &= df["fahrzeugart"] == fahrzeugart_filter
 
 if hat_ahk:
     mask &= df["hat_ahk"] == True
