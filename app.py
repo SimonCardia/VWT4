@@ -7,6 +7,30 @@ st.title("🚐 VW T4 Kleinanzeigen – Filter & Suche")
 import sys
 sys.path.insert(0, ".")
 from utils import load_data
+import requests
+from math import radians, sin, cos, sqrt, atan2
+
+@st.cache_data
+def get_coords(plz):
+    try:
+        r = requests.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={"postalcode": plz, "countrycodes": "de", "format": "json", "limit": 1},
+            headers={"User-Agent": "VWT4App/1.0"},
+            timeout=10
+        )
+        data = r.json()
+        if data:
+            return float(data[0]["lat"]), float(data[0]["lon"])
+    except Exception:
+        pass
+    return None
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    a = sin((lat2-lat1)/2)**2 + cos(lat1)*cos(lat2)*sin((lon2-lon1)/2)**2
+    return R * 2 * atan2(sqrt(a), sqrt(1-a))
 df = load_data()
 
 # --- Sidebar Filter ---
@@ -55,6 +79,15 @@ hat_standheizung = st.sidebar.checkbox("Standheizung")
 hat_hochdach = st.sidebar.checkbox("Hochdach")
 hat_lkw = st.sidebar.checkbox("LKW-Zulassung")
 
+home_plz = st.sidebar.text_input("Mein Standort (PLZ)", value="04109")
+home_coords = get_coords(home_plz) if home_plz else None
+if home_coords:
+    st.sidebar.caption(f"📍 {home_plz} erkannt")
+else:
+    st.sidebar.caption("⚠ PLZ nicht gefunden")
+
+max_entfernung = st.sidebar.slider("Max. Entfernung (km)", 0, 800, 800, step=10)
+
 ort_suche = st.sidebar.text_input("Standort enthält (PLZ oder Ort)")
 freitext = st.sidebar.text_input("Freitext-Suche (Titel / Beschreibung)")
 schaeden_suche = st.sidebar.text_input("Schäden enthält")
@@ -70,7 +103,7 @@ sort_asc = st.sidebar.radio("Reihenfolge", ["Aufsteigend", "Absteigend"]) == "Au
 
 # --- Filterlogik ---
 mask = (
-    df["preis_num"].between(*preis_range) &
+    (df["preis_num"].between(*preis_range) | df["preis_num"].isna()) &
     df["km_num"].between(*km_range) &
     df["jahr"].between(*jahr_range) &
     (df["ps_num"].between(*ps_range) | df["ps_num"].isna())
@@ -116,6 +149,9 @@ if hat_hochdach:
     mask &= df["hat_hochdach"] == True
 if hat_lkw:
     mask &= df["hat_lkw_zulassung"] == True
+
+if home_coords and max_entfernung < 800 and "entfernung_km" in df.columns:
+    mask &= (df["entfernung_km"] <= max_entfernung) | df["entfernung_km"].isna()
 
 if ort_suche:
     mask &= df["Ort"].str.contains(ort_suche, case=False, na=False)
