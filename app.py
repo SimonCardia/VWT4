@@ -4,11 +4,9 @@ import pandas as pd
 st.set_page_config(page_title="VW T4 Anzeigen", layout="wide")
 st.title("🚐 VW T4 Kleinanzeigen – Filter & Suche")
 
-@st.cache_data
-def load_data():
-    df = pd.read_parquet("data/final/output_final.parquet")
-    return df
-
+import sys
+sys.path.insert(0, ".")
+from utils import load_data
 df = load_data()
 
 # --- Sidebar Filter ---
