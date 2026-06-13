@@ -26,27 +26,27 @@ ps_max = int(df["ps_num"].max(skipna=True))
 ps_range = st.sidebar.slider("Leistung (PS)", ps_min, ps_max, (ps_min, ps_max), step=1)
 
 hu_optionen = sorted([x for x in df["hu_monat_num"].unique() if x != "unbekannt"])
-hu_filter = st.sidebar.selectbox("HU bis (frühestens)", ["alle"] + hu_optionen)
+hu_filter = st.sidebar.multiselect("HU bis (frühestens)", hu_optionen)
 
-rost_filter = st.sidebar.selectbox("Rost", ["alle", "vorhanden", "nicht vorhanden", "unbekannt"])
-fahrbereit_filter = st.sidebar.selectbox("Fahrbereit", ["alle", "ja", "nein", "eingeschraenkt", "unbekannt"])
-reparaturstau_filter = st.sidebar.selectbox("Reparaturstau", ["alle", "ja", "nein", "unbekannt"])
-vorbesitzer_filter = st.sidebar.selectbox("Vorbesitzer", ["alle", "privat", "gewerblich", "unbekannt"])
+rost_filter = st.sidebar.multiselect("Rost", ["vorhanden", "nicht vorhanden", "unbekannt"])
+fahrbereit_filter = st.sidebar.multiselect("Fahrbereit", ["ja", "nein", "eingeschraenkt", "unbekannt"])
+reparaturstau_filter = st.sidebar.multiselect("Reparaturstau", ["ja", "nein", "unbekannt"])
+vorbesitzer_filter = st.sidebar.multiselect("Vorbesitzer", ["privat", "gewerblich", "unbekannt"])
 
 zustand_optionen = ["alle"] + sorted(df["Fahrzeugzustand"].dropna().unique().tolist())
-zustand_filter = st.sidebar.selectbox("Fahrzeugzustand", zustand_optionen)
+zustand_filter = st.sidebar.multiselect("Fahrzeugzustand", zustand_optionen[1:])
 
 kraftstoff_optionen = ["alle"] + sorted(df["Kraftstoffart"].dropna().unique().tolist())
-kraftstoff_filter = st.sidebar.selectbox("Kraftstoffart", kraftstoff_optionen)
+kraftstoff_filter = st.sidebar.multiselect("Kraftstoffart", kraftstoff_optionen[1:])
 
 getriebe_optionen = ["alle"] + sorted(df["Getriebe"].dropna().unique().tolist())
-getriebe_filter = st.sidebar.selectbox("Getriebe", getriebe_optionen)
+getriebe_filter = st.sidebar.multiselect("Getriebe", getriebe_optionen[1:])
 
 farbe_optionen = ["alle"] + sorted(df["Außenfarbe"].dropna().unique().tolist())
-farbe_filter = st.sidebar.selectbox("Außenfarbe", farbe_optionen)
+farbe_filter = st.sidebar.multiselect("Außenfarbe", farbe_optionen[1:])
 
 fahrzeugart_optionen = ["alle"] + sorted(df["fahrzeugart"].dropna().unique().tolist())
-fahrzeugart_filter = st.sidebar.selectbox("Fahrzeugart", fahrzeugart_optionen)
+fahrzeugart_filter = st.sidebar.multiselect("Fahrzeugart", fahrzeugart_optionen[1:])
 
 st.sidebar.subheader("🔧 Ausstattung")
 hat_ahk = st.sidebar.checkbox("Anhängerkupplung (AHK)")
@@ -76,35 +76,35 @@ mask = (
     (df["ps_num"].between(*ps_range) | df["ps_num"].isna())
 )
 
-if hu_filter != "alle":
-    mask &= df["hu_monat_num"] >= hu_filter
+if hu_filter:
+    mask &= df["hu_monat_num"].isin(hu_filter)
 
-if rost_filter != "alle":
-    mask &= df["rost_hinweise"] == rost_filter
+if rost_filter:
+    mask &= df["rost_hinweise"].isin(rost_filter)
 
-if fahrbereit_filter != "alle":
-    mask &= df["fahrbereit"] == fahrbereit_filter
+if fahrbereit_filter:
+    mask &= df["fahrbereit"].isin(fahrbereit_filter)
 
-if reparaturstau_filter != "alle":
-    mask &= df["reparaturstau"] == reparaturstau_filter
+if reparaturstau_filter:
+    mask &= df["reparaturstau"].isin(reparaturstau_filter)
 
-if vorbesitzer_filter != "alle":
-    mask &= df["vorbesitzer_nutzung"] == vorbesitzer_filter
+if vorbesitzer_filter:
+    mask &= df["vorbesitzer_nutzung"].isin(vorbesitzer_filter)
 
-if zustand_filter != "alle":
-    mask &= df["Fahrzeugzustand"] == zustand_filter
+if zustand_filter:
+    mask &= df["Fahrzeugzustand"].isin(zustand_filter)
 
-if kraftstoff_filter != "alle":
-    mask &= df["Kraftstoffart"] == kraftstoff_filter
+if kraftstoff_filter:
+    mask &= df["Kraftstoffart"].isin(kraftstoff_filter)
 
-if getriebe_filter != "alle":
-    mask &= df["Getriebe"] == getriebe_filter
+if getriebe_filter:
+    mask &= df["Getriebe"].isin(getriebe_filter)
 
-if farbe_filter != "alle":
-    mask &= df["Außenfarbe"] == farbe_filter
+if farbe_filter:
+    mask &= df["Außenfarbe"].isin(farbe_filter)
 
-if fahrzeugart_filter != "alle":
-    mask &= df["fahrzeugart"] == fahrzeugart_filter
+if fahrzeugart_filter:
+    mask &= df["fahrzeugart"].isin(fahrzeugart_filter)
 
 if hat_ahk:
     mask &= df["hat_ahk"] == True
